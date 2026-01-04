@@ -116,51 +116,6 @@ class RadikoBaseIE(InfoExtractor):
         assert ft, to
         return prog, ft, ft_str, to_str
 
-    def _extract_formats(self, video_id, station, is_onair, ft, cursor, auth_token, area_id, query):
-        m3u8_playlist_data = self._download_xml(
-            f'https://radiko.jp/v3/station/stream/pc_html5/{station}.xml', video_id,
-            note='Downloading stream information')
-
-        formats = []
-        found = set()
-
-        timefree_int = 0 if is_onair else 1
-
-        for element in m3u8_playlist_data.findall(f'.//url[@timefree="{timefree_int}"]/playlist_create_url'):
-            pcu = element.text
-            if pcu in found:
-                continue
-            found.add(pcu)
-            playlist_url = update_url_query(pcu, {
-                'station_id': station,
-                **query,
-                'l': '15',
-                'lsid': ''.join(random.choices('0123456789abcdef', k=32)),
-                'type': 'c',
-            })
-
-            time_to_skip = None if is_onair else cursor - ft
-
-            domain = urllib.parse.urlparse(playlist_url).netloc
-            subformats = self._extract_m3u8_formats(
-                playlist_url, video_id, ext='m4a',
-                live=True, fatal=False, m3u8_id=domain,
-                note=f'Downloading m3u8 information from {domain}',
-                headers={
-                    'X-Radiko-AreaId': area_id,
-                    'X-Radiko-AuthToken': auth_token,
-                })
-            for sf in subformats:
-                if (is_onair ^ pcu.startswith(self._HOSTS_FOR_LIVE)) or (
-                        not is_onair and pcu.startswith(self._HOSTS_FOR_TIME_FREE_FFMPEG_UNSUPPORTED)):
-                    sf['preference'] = -100
-                    sf['format_note'] = 'not preferred'
-                if not is_onair and timefree_int == 1 and time_to_skip:
-                    sf['downloader_options'] = {'ffmpeg_args': ['-ss', str(time_to_skip)]}
-            formats.extend(subformats)
-
-        return formats
-
     def _extract_performers(self, prog):
         return traverse_obj(prog, (
             'pfm/text()', ..., {lambda x: re.split(r'[/／、　,，]', x)}, ..., {str.strip})) or None
@@ -181,6 +136,54 @@ class RadikoIE(RadikoBaseIE):
         'url': 'https://radiko.jp/#!/ts/JOAK-FM/20210509090000',
         'only_matching': True,
     }]
+
+    def _extract_formats(self, video_id, station, ft, cursor, auth_token, area_id, query):
+        formats = []
+        time_to_skip = cursor - ft
+
+        # For time-free streams, use the XML-based playlist URLs
+        m3u8_playlist_data = self._download_xml(
+            f'https://radiko.jp/v3/station/stream/pc_html5/{station}.xml', video_id,
+            note='Downloading stream information')
+
+        found = set()
+        timefree_int = 1
+
+        for element in m3u8_playlist_data.findall(f'.//url[@timefree="{timefree_int}"]/playlist_create_url'):
+            pcu = element.text
+            if pcu in found:
+                continue
+            found.add(pcu)
+            playlist_url = update_url_query(pcu, {
+                'station_id': station,
+                **query,
+                'l': '15',
+                'lsid': ''.join(random.choices('0123456789abcdef', k=32)),
+                'type': 'c',
+            })
+
+            domain = urllib.parse.urlparse(playlist_url).netloc
+            fmt = {
+                'url': playlist_url,
+                'format_id': domain,
+                'ext': 'm4a',
+                'protocol': 'm3u8_native',
+                'http_headers': {
+                    'X-Radiko-AreaId': area_id,
+                    'X-Radiko-AuthToken': auth_token,
+                },
+            }
+
+            if pcu.startswith(self._HOSTS_FOR_TIME_FREE_FFMPEG_UNSUPPORTED):
+                fmt['preference'] = -100
+                fmt['format_note'] = 'not preferred'
+
+            if time_to_skip:
+                fmt['downloader_options'] = {'ffmpeg_args': ['-ss', str(time_to_skip)]}
+
+            formats.append(fmt)
+
+        return formats
 
     def _get_broadcast_day(self, timestring):
         dt = datetime.datetime.strptime(timestring, '%Y%m%d%H%M%S')
@@ -212,7 +215,7 @@ class RadikoIE(RadikoBaseIE):
             'duration': try_call(lambda: unified_timestamp(radio_end, False) - unified_timestamp(radio_begin, False)),
             'is_live': True,
             'formats': self._extract_formats(
-                video_id=video_id, station=station, is_onair=False,
+                video_id=video_id, station=station,
                 ft=ft, cursor=vid_int, auth_token=auth_token, area_id=area_id,
                 query={
                     'start_at': radio_begin,
@@ -241,6 +244,35 @@ class RadikoRadioIE(RadikoBaseIE):
         'only_matching': True,
     }]
 
+    def _extract_formats(self, station, auth_token, area_id, query):
+        formats = []
+
+        # For live streams, use the simul-stream URL which works with ffmpeg
+        # This follows the same approach as streamlink and radiko-playlist
+        # The simul-stream URL returns a chunklist instead of a medialist,
+        # which ffmpeg can handle properly with authentication headers
+        playlist_url = update_url_query(
+            f'http://f-radiko.smartstream.ne.jp/{station}/_definst_/simul-stream.stream/playlist.m3u8',
+            {
+                'station_id': station,
+                **query,
+                'l': '15',
+                'lsid': ''.join(random.choices('0123456789abcdef', k=32)),
+                'type': 'b',
+            })
+
+        formats.append({
+            'url': playlist_url,
+            'format_id': 'simul-stream',
+            'ext': 'm4a',
+            'protocol': 'm3u8_native',
+            'http_headers': {
+                'X-Radiko-AreaId': area_id,
+                'X-Radiko-AuthToken': auth_token,
+            },
+        })
+        return formats
+
     def _real_extract(self, url):
         station = self._match_id(url)
         self.report_warning('Downloader will not stop at the end of the program! Press Ctrl+C to stop')
@@ -259,8 +291,7 @@ class RadikoRadioIE(RadikoBaseIE):
         station_name = station_program.find('.//name').text
 
         formats = self._extract_formats(
-            video_id=station, station=station, is_onair=True,
-            ft=ft, cursor=vid_now, auth_token=auth_token, area_id=area_id,
+            station=station, auth_token=auth_token, area_id=area_id,
             query={})
 
         return {
