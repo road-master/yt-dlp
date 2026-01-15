@@ -1,0 +1,7 @@
+services:
+  yt-dlp:
+    build: .
+    image: futureys/yt-dlp:latest
+    volumes:
+      - .:/workspace
+      - /workspace/.venv

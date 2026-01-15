@@ -1,0 +1,107 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/docker-existing-docker-compose
+{
+	"name": "Existing Docker Compose (Extend)",
+
+	// Update the 'dockerComposeFile' list if you have more compose files or use different names.
+	// The .devcontainer/docker-compose.yml file contains any overrides you need/want to make.
+	"dockerComposeFile": [
+		"../compose.yml",
+		"compose.yml"
+	],
+
+	// The 'service' property is the name of the service for the container that VS Code should
+	// use. Update this value and .devcontainer/docker-compose.yml to the real service name.
+	"service": "yt-dlp",
+
+	// The optional 'workspaceFolder' property is the path VS Code should open by default when
+	// connected. This is typically a file mount in .devcontainer/docker-compose.yml
+	"workspaceFolder": "/workspace",
+
+	// Features to add to the dev container. More info: https://containers.dev/features.
+	// "features": {},
+
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	// "forwardPorts": [],
+
+	// Uncomment the next line if you want start specific services in your Docker Compose config.
+	// "runServices": [],
+
+	// Uncomment the next line if you want to keep your containers running after VS Code shuts down.
+	// "shutdownAction": "none",
+
+	// Uncomment the next line to run commands after the container is created.
+	// "postCreateCommand": "cat /etc/os-release",
+
+	// Configure tool-specific properties.
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "Anthropic.claude-code",
+        // Google 検索の回数を減らすため
+        "GitHub.copilot",
+        // スペルミスを減らすため
+        "streetsidesoftware.code-spell-checker",
+        // pyproject.toml の文法チェックのため
+        "tamasfe.even-better-toml",
+        // Python コードのフォーマット / Lint の結果をコード上に表示するため
+        "charliermarsh.ruff",
+        // Python コードの VS Code 上での文法チェックやジャンプなどを可能にするため
+        "ms-python.python",
+        // Python コードの Lint の結果をコード上に表示するため
+        "ms-python.flake8",
+        // Python コードの型チェックの結果をコード上に表示するため
+        "ms-python.mypy-type-checker",
+        // Python コードの Lint の結果をコード上に表示するため
+        "ms-python.pylint",
+        // Python コードのセキュリティチェックの結果をコード上に表示するため
+        "pycqa.bandit-pycqa",
+        // Python コード保存時に docformatter を実行するため
+        "emeraldwalk.RunOnSave"
+      ],
+      "settings": {
+        "[python]": {
+          // Python コードのフォーマットを Ruff で行わせるため
+          "editor.defaultFormatter": "charliermarsh.ruff",
+          // Python ファイル保存時に可能なフォーマットをすべて実行させるため
+          "editor.codeActionsOnSave": {
+            "source.fixAll": "explicit",
+            "source.organizeImports": "explicit"
+          },
+          // Python ファイル保存時に自動的にフォーマットさせるため
+          "editor.formatOnSave": true
+        },
+        // 拡張機能: pycqa.bandit-pycqa に
+        // pyproject.toml の設定内容で bandit を実行させるため
+        "bandit.args": [
+          "--configfile",
+          "pyproject.toml"
+        ],
+        // プロジェクト中の専門用語を
+        //  settings.json ではない独立したファイルに登録するため:
+        // - streetsidesoftware/vscode-spell-checker: A simple source code spell checker for code
+        //   https://github.com/streetsidesoftware/vscode-spell-checker?tab=readme-ov-file#project--workspace-dictionary-using-vs-code-settings
+        "cSpell.customDictionaries": {
+          "project-words": {
+            "name": "project-words",
+            "path": "${workspaceRoot}/project-words.txt",
+            "description": "Words used in this project",
+            "addWords": true
+          }
+        },
+        // Python コード保存時に docformatter を実行するため
+        "emeraldwalk.runonsave": {
+          "commands": [
+            {
+              "match": ".*\\.py",
+              "cmd": "uv run docformatter --in-place ${file}"
+            }
+          ]
+        }
+      }
+    }
+  },
+
+	// Uncomment to connect as an existing user other than the container default. More info: https://aka.ms/dev-containers-non-root.
+	// "remoteUser": "root"
+}

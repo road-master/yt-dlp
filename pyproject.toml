@@ -1,3 +1,60 @@
+[dependency-groups]
+dev = [
+    "bandit; python_version >= '3.7'",
+    "cohesion",
+    # The coverage==3.5.3 is difficult to analyze its dependencies by dependencies management tool,
+    # so we should avoid 3.5.3 or lower.
+    # - Command: "pipenv install --skip-lock" fails 
+    #   since it tries to parse legacy package metadata and raise InstallError
+    #   · Issue #5595 · pypa/pipenv
+    #   https://github.com/pypa/pipenv/issues/5595
+    "coverage>=3.5.4",
+    # The dlint less than 0.14.0 limits max version of flake8.
+    # - dlint/requirements.txt at 0.13.0 · dlint-py/dlint
+    #   https://github.com/dlint-py/dlint/blob/0.13.0/requirements.txt#L1
+    "dlint>=0.14.0",
+    # To the docformatter load pyproject.toml settings:
+    "docformatter[tomli]; python_version < '3.11'",
+    "docformatter; python_version >= '3.11'",
+    "dodgy",
+    "exceptiongroup; python_version <= '3.10'",
+    "factory_boy",
+    "fixturefilehandler",
+    # The hacking depends flake8 ~=6.1.0 or ~=5.0.1 or ~=4.0.1.
+    # We should avoid the versions that is not compatible with the hacking,
+    # considering the speed of dependency calculation process
+    "flake8!=6.0.0,!=5.0.0,>=4.0.1",
+    # To replace E501 in pycodestyle with B950 in flake8-bugbear:
+    # - Using Black with other tools - Black 25.1.0 documentation
+    #   https://black.readthedocs.io/en/stable/guides/using_black_with_other_tools.html#bugbear
+    "flake8-bugbear",
+    # To use flake8 --radon-show-closures
+    "flake8-polyfill",
+    # To use pyproject.toml for Flake8 configuration
+    "Flake8-pyproject",
+    # Latest hacking depends on legacy version of flake8, and legacy hacking doesn't narrow flake8 version.
+    # When unpin hacking, it has possibility to install too legacy version of hacking.
+    "hacking>=5.0.0; python_version >= '3.8'",
+    "invokelint>=0.8.1",
+    "mypy",
+    # Currently, migration steps is difficult
+    "pydantic>=2.0.0",
+    "pylint",
+    "pytest",
+    "pytest-resource-path",
+    "pyvelocity; python_version >= '3.9'",
+    # Since the radon can't run when use pytest log format:
+    # - Radon can't run when use pytest log fornat: `$()d` · Issue #251 · rubik/radon
+    #   https://github.com/rubik/radon/issues/251
+    "radon<6.0.0",
+    "returns",
+    "ruff",
+    "semgrep;python_version>='3.9' or platform_system=='Linux'",
+    "types-invoke",
+    "typing-extensions; python_version <= '3.10'",
+    "xenon",
+]
+
 [build-system]
 requires = ["hatchling>=1.27.0"]
 build-backend = "hatchling.build"
@@ -405,3 +462,6 @@ addopts = [
 markers = [
     "download",
 ]
+
+[tool.setuptools.packages.find]
+include = ["yt_dlp", "yt_dlp.*"]
