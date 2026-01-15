@@ -13,10 +13,33 @@ from ..utils.traversal import traverse_obj
 class NiconicoLiveFD(FileDownloader):
     """ Downloads niconico live without being stopped """
 
+    def _parse_timeshift_position(self, position_str):
+        """Parse timeshift position from hh:mm:ss format to seconds"""
+        if not position_str:
+            return None
+        
+        try:
+            parts = position_str.split(':')
+            if len(parts) != 3:
+                raise ValueError('Invalid time format')
+            
+            hours, minutes, seconds = map(int, parts)
+            if minutes >= 60 or seconds >= 60:
+                raise ValueError('Invalid time values')
+            
+            return hours * 3600 + minutes * 60 + seconds
+        except (ValueError, TypeError):
+            self.to_screen(f'[niconico:live] Invalid timeshift position format: {position_str}. Expected hh:mm:ss')
+            return None
+
     def real_download(self, filename, info_dict):
         video_id = info_dict['id']
         opts = info_dict['downloader_options']
         quality, ws_extractor, ws_url = opts['max_quality'], opts['ws'], opts['ws_url']
+        
+        # Parse timeshift position from hh:mm:ss format to seconds
+        timeshift_position = self._parse_timeshift_position(self.ydl.params.get('timeshift_position'))
+        
         dl = FFmpegFD(self.ydl, self.params or {})
 
         new_info_dict = info_dict.copy()
@@ -43,6 +66,7 @@ class NiconicoLiveFD(FileDownloader):
                             'protocol': 'hls',
                             'quality': quality,
                         },
+                        'timeshiftPosition': timeshift_position
                     },
                     'type': 'startWatching',
                 }))

@@ -936,6 +936,7 @@ def parse_options(argv=None):
         'external_downloader': opts.external_downloader,
         'download_ranges': opts.download_ranges,
         'force_keyframes_at_cuts': opts.force_keyframes_at_cuts,
+        'timeshift_position': opts.timeshift_position,
         'list_thumbnails': opts.list_thumbnails,
         'playlist_items': opts.playlist_items,
         'match_filter': opts.match_filter,

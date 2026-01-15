@@ -1129,6 +1129,10 @@ def create_parser():
             'Needs ffmpeg. This option can be used multiple times to download multiple sections, '
             'e.g. --download-sections "*10:15-inf" --download-sections "intro"'))
     downloader.add_option(
+        '--timeshift-position',
+        metavar='TIME', dest='timeshift_position',
+        help='Start watching Niconico live from a specific time position (format: hh:mm:ss)')
+    downloader.add_option(
         '--downloader', '--external-downloader',
         dest='external_downloader', metavar='[PROTO:]NAME', default={}, type='str',
         action='callback', callback=_dict_from_options_callback,
