@@ -155,6 +155,8 @@ class RadikoBaseIE(InfoExtractor):
                         not is_onair and pcu.startswith(self._HOSTS_FOR_TIME_FREE_FFMPEG_UNSUPPORTED)):
                     sf['preference'] = -100
                     sf['format_note'] = 'not preferred'
+                elif pcu.startswith('https://radiko.jp'):
+                    sf['preference'] = 1
                 if not is_onair and timefree_int == 1 and time_to_skip:
                     sf['downloader_options'] = {'ffmpeg_args': ['-ss', str(time_to_skip)]}
             formats.extend(subformats)
